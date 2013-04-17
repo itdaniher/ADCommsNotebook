@@ -3,6 +3,7 @@ import numpy
 import matplotlib.pyplot as plt
 import time
 import scipy
+import asciitable
 
 numpy.set_printoptions(threshold=numpy.nan)
 
@@ -44,6 +45,12 @@ def get_binarystr(data):
 		init_ts = ts
 	return binstring
 
+def chunks(l, n):
+    return [int(l[i:i+n],2) for i in range(0, len(l), n)]
+
+def convert_to_ascii(l):
+	return [chr(i) for i in l]
+
 def plot_figure(X):
 	plt.figure()
 	plt.imshow(numpy.absolute(X.T[0:6,1550:3700]), origin='lower', aspect='auto', interpolation='nearest')
@@ -56,6 +63,8 @@ samples = load_data("helloWorldSamples.npz")
 X = stft(samples, sample_rate, 0.0001, 0.0001)
 data = crop_data(X)
 binstring = get_binarystr(data)
-print binstring
+chunked = chunks(binstring, 8)
+print chunked
+print convert_to_ascii(chunked)
 
 plot_figure(X)
