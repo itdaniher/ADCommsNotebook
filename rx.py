@@ -19,7 +19,7 @@ def _window(sequence, winSize, step=1):
 snap = lambda levels, x: levels.flat[numpy.abs(levels - x).argmin()]
 
 if __name__ == "__main__":
-	duration = 0.5
+	duration = 0.3
 	sdr = rtlsdr.RtlSdr()
 	sdr.sample_rate = 2.4e6
 	sdr.center_freq = 144.62e6
@@ -78,4 +78,4 @@ if __name__ == "__main__":
 			bits.append(0)
 		if x == [False, True]:
 			bits.append(1)
-	print _chunk(bits, 8)
+	print [chr(int(''.join(map(str, x[::-1])), 2)) for x in _chunk(bits, 8)]
