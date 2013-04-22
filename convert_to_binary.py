@@ -3,7 +3,6 @@ import numpy
 import matplotlib.pyplot as plt
 import time
 import scipy
-import asciitable
 
 numpy.set_printoptions(threshold=numpy.nan)
 

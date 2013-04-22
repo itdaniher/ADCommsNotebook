@@ -17,23 +17,23 @@ def _window(sequence, winSize, step=1):
 		yield sequence[i:i+winSize]
 
 
-def getData(duration):
-	sdr = rtlsdr.RtlSdr()
-
-	sdr.sample_rate = 2.4e6
-	sdr.center_freq = 144.62e6
-	sdr.gain = 'auto'
-
-	sampleCt = 1024 * int((duration*sdr.sample_rate)/1000)
-
-	samples = sdr.read_samples(sampleCt)
-	return samples
-
 snap = lambda levels, x: levels.flat[numpy.abs(levels - x).argmin()]
 
 if __name__ == "__main__":
+	duration = 0.35
+	sdr = rtlsdr.RtlSdr()
+	sdr.sample_rate = 2.4e6
+	sdr.center_freq = 144.62e6
+	sdr.gain = 'auto'
+	sampleCt = 1024 * int((duration*sdr.sample_rate)/1000)
 
-	samples = getData(0.2)
+
+	import socket
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+	s.connect(("10.33.91.11", 80))
+	s.send('\xff')
+	s.close()
+	samples = sdr.read_samples(sampleCt)
 	datums = []
 	t = 0
 
@@ -56,26 +56,26 @@ if __name__ == "__main__":
 
 	threshold = lambda d: (d[1] > mean and d[2] == freq)
 
-	thresholded = rle.runlength_enc([threshold(d) for d in datums])
-	thresholded = [(snap(levels, l), s) for (l, s) in thresholded if l < 1000]
+	durationEncoded = list(rle.runlength_enc([threshold(d) for d in datums]))
 
-	plt.plot([x[0] for x in thresholded], 'k.')
+	print durationEncoded
+	
+	processed = []
+
+	for (l, s) in durationEncoded:
+		if (100 < l < 1000):
+			processed.append((snap(levels, l), s))
+		if l > 2000:
+			print numpy.argmin(numpy.abs(numpy.array([l for (l, s) in durationEncoded])-l)), l
+	
+	print processed
+	#print len(_chunk([s for (l, s) in processed], 2))
+
+	plt.plot([x[0] for x in processed], 'k.')
 	plt.figure()
 	plt.plot([d[2] for d in datums], [d[1] for d in datums], 'k.')
+	plt.figure()
+	plt.plot([d[0] for d in datums], [d[1] for d in datums], 'k.')
 	plt.show()
 
-
-data = [(250, False), (500, True), (750, False), (250, True), (0, False), (500, True), (250, False), (500, True), (250, False), (500, True), (250, False), (500, True), (750, False), (750, True), (250, False), (500, True), (750, False), (250, True), (750, False), (250, True), (500, False), (250, True), (500, False), (250, True), (500, False), (250, True), (500, False), (750, True), (750, False), (250, True), (500, False), (250, True), (0, False), (750, True), (250, False), (500, True), (250, False), (500, True), (750, False), (750, True), (250, False), (500, True), (250, False), (500, True), (750, False), (250, True), (0, False), (500, True), (250, False), (500, True), (250, False), (500, True), (250, False), (500, True), (750, False), (750, True), (250, False), (500, True), (750, False), (250, True), (750, False), (750, True), (750, False), (250, True), (500, False), (750, True), (250, False), (500, True), (250, False), (500, True), (750, False), (250, True), (750, False), (250, True), (500, False), (750, True), (250, False), (500, True), (750, False), (750, True), (250, False), (500, True), (750, False), (250, True), (750, False), (250, True), (500, False), (750, True), (750, False), (250, True), (500, False), (250, True), (0, False), (500, True), (250, False), (500, True), (750, False), (250, True)]
-
-data2 = [(250, False), (500, True), (250, False), (500, True), (750, False), (250, True), (0, False), (500, True), (250, False), (500, True), (750, False), (250, True), (500, False), (750, True), (750, False), (250, True), (500, False), (250, True), (0, False), (500, True), (250, False), (500, True), (250, False), (500, True), (750, False), (250, True), (750, False), (250, True), (500, False), (750, True), (250, False), (500, True), (750, False), (750, True), (250, False), (500, True), (750, False), (250, True), (750, False), (250, True), (500, False), (250, True), (0, False), (500, True), (750, False), (250, True), (500, False), (750, True), (250, False), (500, True), (750, False), (250, True)]
-
-data3 = [(750, False), (250, True), (500, False), (750, True), (250, False), (500, True), (750, False), (250, True), (0, False), (500, True), (250, False), (500, True), (750, False), (250, True), (750, False), (250, True), (500, False), (750, True), (750, False), (250, True), (500, False), (250, True), (0, False), (500, True), (250, False), (500, True), (750, False), (250, True)]
-
-data4 = [(750, False), (750, True), (250, False), (500, True), (250, False), (500, True), (750, False), (250, True), (0, False), (750, True), (250, False), (500, True), (250, False), (500, True), (250, False), (500, True), (750, False), (750, True), (250, False), (500, True), (750, False), (250, True), (750, False), (750, True), (750, False), (250, True), (500, False), (750, True), (250, False), (500, True), (250, False), (500, True), (750, False), (250, True), (750, False), (250, True), (500, False), (250, True), (0, False), (500, True), (250, False), (500, True), (750, False), (750, True), (250, False), (500, True), (750, False), (250, True), (500, False), (250, True), (500, False), (750, True), (750, False), (250, True), (500, False), (250, True), (0, False), (500, True), (250, False), (500, True), (750, False), (250, True)]
-
-data5 = [(250, False), (500, True), (250, False), (500, True), (250, False), (500, True), (250, False), (500, True), (750, False), (750, True), (250, False), (500, True), (750, False), (250, True), (750, False), (250, True), (500, False), (250, True), (500, False), (250, True), (500, False), (250, True), (500, False), (750, True), (750, False), (250, True), (500, False), (250, True), (0, False), (750, True), (250, False), (500, True), (250, False), (500, True), (750, False), (750, True), (250, False), (500, True), (250, False), (500, True), (750, False), (250, True), (0, False), (750, True), (250, False), (500, True), (250, False), (500, True), (250, False), (500, True), (750, False), (750, True), (250, False), (500, True), (750, False), (250, True), (750, False), (250, True), (0, False), (500, True), (750, False), (250, True), (500, False), (750, True), (250, False), (500, True), (250, False), (500, True), (750, False), (250, True), (750, False), (250, True), (500, False), (750, True), (250, False), (500, True), (750, False), (250, True), (0, False), (500, True), (250, False), (500, True), (750, False), (250, True), (750, False), (250, True), (500, False), (250, True), (0, False), (500, True), (750, False), (250, True), (500, False), (750, True), (250, False), (500, True), (750, False), (250, True)]
-
-data6 = [(250, True), (500, False), (250, True), (500, False), (250, True), (0, False), (500, True), (750, False), (250, True), (0, False), (500, True), (250, False), (500, True), (750, False), (250, True), (0, False), (750, True), (750, False), (750, True), (750, False), (250, True), (500, False), (250, True), (0, False), (500, True), (250, False), (500, True), (750, False), (250, True), (500, False), (250, True), (500, False), (250, True), (0, False), (500, True), (250, False), (500, True), (500, False)]
-
-data7 = [(250, True), (500, False), (250, True), (500, False), (250, True), (0, False), (500, True), (750, False), (750, True), (250, False), (500, True), (750, False), (250, True), (0, False), (750, True), (750, False), (250, True), (0, False), (500, True), (750, False), (250, True), (500, False), (750, True), (250, False), (500, True), (750, False), (250, True), (750, False), (250, True), (500, False), (750, True), (250, False), (500, True), (750, False), (750, True), (250, False), (500, True), (750, False), (250, True), (750, False), (250, True), (500, False), (250, True), (0, False), (500, True), (250, False), (500, True), (750, False), (250, True), (0, False), (500, True), (250, False), (500, True), (750, False), (250, True), (0, False), (500, True), (250, False), (500, True), (250, False), (500, True), (250, False), (500, True), (750, False), (250, True), (0, False), (500, True), (250, False), (500, True), (750, False), (250, True), (750, False), (250, True), (500, False), (250, True), (500, False), (250, True), (500, False), (250, True), (500, False), (250, True), (0, False), (500, True), (750, False), (250, True), (500, False), (250, True), (0, False), (750, True), (250, False), (500, True), (250, False), (500, True), (750, False), (750, True), (250, False), (500, True), (250, False), (500, True), (750, False), (0, True)]
 

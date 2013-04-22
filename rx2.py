@@ -24,7 +24,7 @@ def stft(x, fs, framesz, hop):
 print sampleCt 
 samples = sdr.read_samples(int(sampleCt))
 
-X = stft(samples, sdr.sample_rate, 0.001, 0.001)
+X = stft(samples, sdr.sample_rate, 0.0001, 0.0001)
 plt.figure()
 plt.imshow(numpy.absolute(X.T), origin='lower', aspect='auto', interpolation='nearest')
 plt.xlabel('Time')
