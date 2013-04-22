@@ -1,7 +1,6 @@
 from __future__ import division
 import rtlsdr
 import numpy
-import matplotlib.pyplot as plt
 import time
 import scipy
 
@@ -20,7 +19,7 @@ def _window(sequence, winSize, step=1):
 snap = lambda levels, x: levels.flat[numpy.abs(levels - x).argmin()]
 
 if __name__ == "__main__":
-	duration = 0.35
+	duration = 0.5
 	sdr = rtlsdr.RtlSdr()
 	sdr.sample_rate = 2.4e6
 	sdr.center_freq = 144.62e6
@@ -52,7 +51,7 @@ if __name__ == "__main__":
 	freqs = numpy.array(list(set([d[2] for d in datums])))
 	freq = freqs[numpy.argmin(numpy.abs(freqs - 144.64e6))]
 	
-	levels = numpy.array([0, 250, 500, 750])
+	levels = numpy.array([0, 250, 500])
 
 	threshold = lambda d: (d[1] > mean and d[2] == freq)
 
@@ -66,16 +65,17 @@ if __name__ == "__main__":
 		if (100 < l < 1000):
 			processed.append((snap(levels, l), s))
 		if l > 2000:
-			print numpy.argmin(numpy.abs(numpy.array([l for (l, s) in durationEncoded])-l)), l
-	
-	print processed
-	#print len(_chunk([s for (l, s) in processed], 2))
-
-	plt.plot([x[0] for x in processed], 'k.')
-	plt.figure()
-	plt.plot([d[2] for d in datums], [d[1] for d in datums], 'k.')
-	plt.figure()
-	plt.plot([d[0] for d in datums], [d[1] for d in datums], 'k.')
-	plt.show()
-
-
+			print [i for i, x in enumerate(durationEncoded) if x == (l, s)]
+	expanded = []
+	for (l, s) in processed:
+		for i in range(int(l/250)):
+			expanded.append(s)
+	if len(expanded) % 2 == 1:
+		expanded.append(False)
+	bits = []
+	for x in _chunk(expanded, 2):
+		if x == [True, False]:
+			bits.append(0)
+		if x == [False, True]:
+			bits.append(1)
+	print _chunk(bits, 8)
