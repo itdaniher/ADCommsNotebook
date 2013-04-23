@@ -19,7 +19,7 @@ def _window(sequence, winSize, step=1):
 snap = lambda levels, x: levels.flat[numpy.abs(levels - x).argmin()]
 
 if __name__ == "__main__":
-	duration = 0.3
+	duration = 0.1
 	sdr = rtlsdr.RtlSdr()
 	sdr.sample_rate = 2.4e6
 	sdr.center_freq = 144.62e6
@@ -40,12 +40,14 @@ if __name__ == "__main__":
 	stride = 10
 	
 	for datapiece in _window(samples, blocksize, stride):
+	#if False:
 		amplitudes = numpy.abs(numpy.fft.fft(datapiece))[0:stride/2]
 		frequencies = numpy.fft.fftfreq(datapiece.shape[-1], d=1/sdr.sample_rate)[0:stride/2] + sdr.center_freq 
 		index = numpy.argmax(numpy.abs(amplitudes))
 		t += stride*1/sdr.sample_rate
 		datums.append((t, amplitudes[index], frequencies[index]))
-	
+	numpy.save("datums", datums)
+	#datums = numpy.load("datums.npy")
 	mean = numpy.mean([d[1] for d in datums])
 	
 	freqs = numpy.array(list(set([d[2] for d in datums])))
@@ -58,24 +60,27 @@ if __name__ == "__main__":
 	durationEncoded = list(rle.runlength_enc([threshold(d) for d in datums]))
 
 	print durationEncoded
-	
-	processed = []
+	minmax = [i for i, x in enumerate(durationEncoded) if x[0] > 2000]
 
-	for (l, s) in durationEncoded:
-		if (100 < l < 1000):
-			processed.append((snap(levels, l), s))
-		if l > 2000:
-			print [i for i, x in enumerate(durationEncoded) if x == (l, s)]
+	print minmax
+
+	processed = [(snap(levels, l), s) for (l, s) in durationEncoded[minmax[0]+1:minmax[-1]]]
+
+	print processed
 	expanded = []
 	for (l, s) in processed:
 		for i in range(int(l/250)):
-			expanded.append(s)
-	if len(expanded) % 2 == 1:
-		expanded.append(False)
-	bits = []
-	for x in _chunk(expanded, 2):
+			expanded.append((l,s))
+	print expanded
+	import bitarray
+	regularized = [x[1] for x in expanded]
+	bits = bitarray.bitarray(endian='little')
+	# if the first two are true, then you're definitely missing a zero
+	if regularized[0] & regularized[1] == True:
+		regularized.insert(0,False)
+	for x in _chunk(regularized, 2):
 		if x == [True, False]:
-			bits.append(0)
+			bits.append(False)
 		if x == [False, True]:
-			bits.append(1)
-	print [chr(int(''.join(map(str, x[::-1])), 2)) for x in _chunk(bits, 8)]
+			bits.append(True)
+	print bits, map(lambda x: hex(ord(x)), bits.tobytes())
