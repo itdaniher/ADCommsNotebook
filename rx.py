@@ -19,7 +19,7 @@ def _window(sequence, winSize, step=1):
 snap = lambda levels, x: levels.flat[numpy.abs(levels - x).argmin()]
 
 if __name__ == "__main__":
-	duration = 0.1
+	duration = 0.1 + 0.002*8*11 + 0.1
 	sdr = rtlsdr.RtlSdr()
 	sdr.sample_rate = 2.4e6
 	sdr.center_freq = 144.62e6
@@ -74,13 +74,19 @@ if __name__ == "__main__":
 	print expanded
 	import bitarray
 	regularized = [x[1] for x in expanded]
-	bits = bitarray.bitarray(endian='little')
-	# if the first two are true, then you're definitely missing a zero
-	if regularized[0] & regularized[1] == True:
-		regularized.insert(0,False)
-	for x in _chunk(regularized, 2):
-		if x == [True, False]:
-			bits.append(False)
-		if x == [False, True]:
-			bits.append(True)
-	print bits, map(lambda x: hex(ord(x)), bits.tobytes())
+	def demod(regularized):
+		bits = bitarray.bitarray(endian='little')
+		for i, x in enumerate(_chunk(regularized, 2)):
+			if x == [True, True]:
+				regularized.insert(i*2, False)
+				return demod(regularized)
+			if x == [False, False]:
+				regularized.insert(i*2, True)
+				return demod(regularized)
+			if x == [True, False]:
+				bits.append(False)
+			if x == [False, True]:
+				bits.append(True)
+		return bits
+	bits = demod(regularized)
+	print bits, map(lambda x: hex(ord(x)), bits.tobytes()), bits.tobytes()
