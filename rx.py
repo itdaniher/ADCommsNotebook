@@ -33,7 +33,7 @@ def sample():
 	import socket
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
 	s.connect(("10.33.91.11", 9000))
-	s.send(chr(34))
+	s.send(chr(50))
 	s.close()
 
 	# get data
@@ -66,18 +66,25 @@ def sample():
 
 	# duration-encoded thresholded values
 	durationEncoded = list(rle.runlength_enc([threshold(d) for d in datums]))
-
+	
 	# find the start and end of the transmission
 	minmax = [i for i, x in enumerate(durationEncoded) if x[0] > 2000]
-
+	print minmax
 	# trim off before/after samples
 	durationEncoded = durationEncoded[minmax[0]+1:minmax[-1]]
 
+	print durationEncoded
+
 	# snap to ideal mean levels for high and low
+	# take the "average" duration, assuming 50% zero one division
 	meanDuration = numpy.mean([l for (l, s) in durationEncoded])
+	# double length mark, happens with a change in symbols ie) 01 or 10
 	high = numpy.mean([l for (l, s) in durationEncoded if l > meanDuration])
+	# single length mark, happens with same symbols ie) 00 or 11
 	low = numpy.mean([l for (l, s) in durationEncoded if l <= meanDuration])
+	# make an array of possible mark durations, include zero to take out the trash
 	levels = numpy.array([0, low, high])
+	# snap the durations to the levels generated above
 	processed = [(_snap(levels, l), s) for (l, s) in durationEncoded]
 
 	regularized = []
@@ -107,9 +114,17 @@ def sample():
 				bits.append(True)
 		return bits
 
-	bits = demod(regularized)
-	return bits.tobytes()
+	return demod(regularized)
 
 if __name__ == "__main__":
+	count = 0.0
+	correct = 0.0
 	while True:
-		sample()
+		bits = sample()
+		if bits.tobytes() == "hello world":
+			correct += 1.0
+		count += 1.0
+		with open("log", 'a') as f:
+			f.write(bits.tobytes()+', ')
+			f.write(str(correct/count))
+			f.write('\n')
