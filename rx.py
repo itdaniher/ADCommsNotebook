@@ -4,7 +4,7 @@ import numpy
 import time
 import scipy
 import bitarray
-
+from pylab import *
 import rle
 
 _chunk = lambda l, x: [l[i:i+x] for i in xrange(0, len(l), x)]
@@ -20,21 +20,22 @@ def _window(sequence, winSize, step=1):
 _snap = lambda levels, x: levels.flat[numpy.abs(levels - x).argmin()]
 
 def sample(bittime):
-	duration = 0.1 + bittime*8*11 + 0.2
+	print "trxing 'hello world at:", 1/bittime, "bits per second"
+	duration = 0.1 + bittime*8*11
 	sdr = rtlsdr.RtlSdr()
 	sdr.sample_rate = 2.4e6
 	sdr.center_freq = 144.62e6
 	sdr.gain = 'auto'
 	# round to nearest 1024 samples
 	sampleCt = round((duration*sdr.sample_rate)/1024)*1024
-
+	print sampleCt
 
 	# trigger transmission
 	import socket
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
 	s.connect(("10.33.91.11", 9000))
-	microseconds = int(bittime/5*1e6)
-	print microseconds
+	microseconds = int(bittime/2*1e6)
+	print microseconds, 'us'
 	s.send(chr(microseconds))
 	s.close()
 
@@ -43,10 +44,10 @@ def sample(bittime):
 	datums = []
 	t = 0
 
-	# 100 sample window; slide by 5 samples
-	blocksize = int(bittime*sdr.sample_rate/10)
-	stride =  int(blocksize/20)
-	print blocksize, stride
+	# these numbers seem weirdly enough rather sensitive to changes in value
+	# 100 and 5 seem to work well across a wide range of bitlengths
+	blocksize = 100
+	stride = 5
 	# sliding FFT	
 	for datapiece in _window(samples, blocksize, stride):
 		amplitudes = numpy.abs(numpy.fft.fft(datapiece))[0:stride/2]
@@ -62,16 +63,16 @@ def sample(bittime):
 	freqs = numpy.array(list(set([d[2] for d in datums])))
 	# find which one is closest to our broadcast frequency
 	freq = freqs[numpy.argmin(numpy.abs(freqs - 144.64e6))]
-	print freq, freqs, meanAmplitude
+
 	# if amplitude is above 50% and peak frequency is in our bin	
 	threshold = lambda d: (d[1] > meanAmplitude and d[2] == freq)
 
 	# duration-encoded thresholded values
 	durationEncoded = list(rle.runlength_enc([threshold(d) for d in datums]))
-	print durationEncoded
+	
 	# find the start and end of the transmission
-	minmax = [i for i, x in enumerate(durationEncoded) if x[0] > 2000]
-	print minmax
+	minmax = [i for i, x in enumerate(durationEncoded) if (x[1] == False) and (x[0] > 1000)]
+	print "minmax:", minmax
 	# trim off before/after samples
 	durationEncoded = durationEncoded[minmax[0]+1:minmax[-1]]
 
@@ -81,15 +82,15 @@ def sample(bittime):
 	# take the "average" duration, assuming 50% zero one division
 	meanDuration = numpy.mean([l for (l, s) in durationEncoded])
 	# double length mark, happens with a change in symbols ie) 01 or 10
-	high = numpy.mean([l for (l, s) in durationEncoded if l > meanDuration])
+	high = int(numpy.mean([l for (l, s) in durationEncoded if l > meanDuration]))
 	# single length mark, happens with same symbols ie) 00 or 11
-	low = numpy.mean([l for (l, s) in durationEncoded if l <= meanDuration])
+	low = int(numpy.mean([l for (l, s) in durationEncoded if l <= meanDuration]))
 	# make an array of possible mark durations, include zero to take out the trash
 	levels = numpy.array([0, low, high])
 	# snap the durations to the levels generated above
 	processed = [(_snap(levels, l), s) for (l, s) in durationEncoded]
 	print levels
-	
+	print processed	
 	regularized = []
 
 	# expand double-length marks to two marks
@@ -99,8 +100,6 @@ def sample(bittime):
 			regularized.append(s)
 		if l == low:
 			regularized.append(s)
-
-
 	def demod(data):
 		# recursive manchester encoding demodulator and resymbolifyier
 		bits = bitarray.bitarray(endian='little')
@@ -131,3 +130,4 @@ if __name__ == "__main__":
 			f.write(bits.tobytes()+', ')
 			f.write(str(correct/count))
 			f.write('\n')
+		print bits.tobytes()
