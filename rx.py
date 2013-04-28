@@ -20,7 +20,7 @@ def _window(sequence, winSize, step=1):
 _snap = lambda levels, x: levels.flat[numpy.abs(levels - x).argmin()]
 
 def sample(bittime):
-	print "trxing 'hello world at:", 1/bittime, "bits per second"
+	print "trxing 'hello world' at:", int(1/bittime), "bits per second"
 	duration = 0.1 + bittime*8*11
 	sdr = rtlsdr.RtlSdr()
 	sdr.sample_rate = 2.4e6
@@ -90,7 +90,6 @@ def sample(bittime):
 	# snap the durations to the levels generated above
 	processed = [(_snap(levels, l), s) for (l, s) in durationEncoded]
 	print levels
-	print processed	
 	regularized = []
 
 	# expand double-length marks to two marks
@@ -122,7 +121,7 @@ if __name__ == "__main__":
 	count = 0.0
 	correct = 0.0
 	while True:
-		bits = sample(0.0005)
+		bits = sample(0.0001)
 		if bits.tobytes() == "hello world":
 			correct += 1.0
 		count += 1.0
@@ -130,4 +129,4 @@ if __name__ == "__main__":
 			f.write(bits.tobytes()+', ')
 			f.write(str(correct/count))
 			f.write('\n')
-		print bits.tobytes()
+		print bits
