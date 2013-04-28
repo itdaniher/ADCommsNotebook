@@ -19,8 +19,8 @@ def _window(sequence, winSize, step=1):
 
 _snap = lambda levels, x: levels.flat[numpy.abs(levels - x).argmin()]
 
-def sample():
-	duration = 0.1 + 0.00007*8*11
+def sample(bittime):
+	duration = 0.1 + bittime*8*11 + 0.2
 	sdr = rtlsdr.RtlSdr()
 	sdr.sample_rate = 2.4e6
 	sdr.center_freq = 144.62e6
@@ -33,7 +33,9 @@ def sample():
 	import socket
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
 	s.connect(("10.33.91.11", 9000))
-	s.send(chr(50))
+	microseconds = int(bittime/5*1e6)
+	print microseconds
+	s.send(chr(microseconds))
 	s.close()
 
 	# get data
@@ -42,9 +44,9 @@ def sample():
 	t = 0
 
 	# 100 sample window; slide by 5 samples
-	blocksize = 100
-	stride = 5
-
+	blocksize = int(bittime*sdr.sample_rate/10)
+	stride =  int(blocksize/20)
+	print blocksize, stride
 	# sliding FFT	
 	for datapiece in _window(samples, blocksize, stride):
 		amplitudes = numpy.abs(numpy.fft.fft(datapiece))[0:stride/2]
@@ -60,13 +62,13 @@ def sample():
 	freqs = numpy.array(list(set([d[2] for d in datums])))
 	# find which one is closest to our broadcast frequency
 	freq = freqs[numpy.argmin(numpy.abs(freqs - 144.64e6))]
-
+	print freq, freqs, meanAmplitude
 	# if amplitude is above 50% and peak frequency is in our bin	
 	threshold = lambda d: (d[1] > meanAmplitude and d[2] == freq)
 
 	# duration-encoded thresholded values
 	durationEncoded = list(rle.runlength_enc([threshold(d) for d in datums]))
-	
+	print durationEncoded
 	# find the start and end of the transmission
 	minmax = [i for i, x in enumerate(durationEncoded) if x[0] > 2000]
 	print minmax
@@ -86,7 +88,8 @@ def sample():
 	levels = numpy.array([0, low, high])
 	# snap the durations to the levels generated above
 	processed = [(_snap(levels, l), s) for (l, s) in durationEncoded]
-
+	print levels
+	
 	regularized = []
 
 	# expand double-length marks to two marks
@@ -120,7 +123,7 @@ if __name__ == "__main__":
 	count = 0.0
 	correct = 0.0
 	while True:
-		bits = sample()
+		bits = sample(0.0005)
 		if bits.tobytes() == "hello world":
 			correct += 1.0
 		count += 1.0
