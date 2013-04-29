@@ -6,6 +6,7 @@ import scipy
 import bitarray
 from pylab import *
 import rle
+import socket
 
 _chunk = lambda l, x: [l[i:i+x] for i in xrange(0, len(l), x)]
 
@@ -19,8 +20,8 @@ def _window(sequence, winSize, step=1):
 
 _snap = lambda levels, x: levels.flat[numpy.abs(levels - x).argmin()]
 
-def sample(bittime):
-	print "trxing 'hello world' at:", int(1/bittime), "bits per second"
+def sample(bittime, blocksize, stride):
+	###print "trying to send 'hello world' at:", int(1/bittime), "bits per second"
 	duration = 0.1 + bittime*8*11
 	sdr = rtlsdr.RtlSdr()
 	sdr.sample_rate = 2.4e6
@@ -28,14 +29,14 @@ def sample(bittime):
 	sdr.gain = 'auto'
 	# round to nearest 1024 samples
 	sampleCt = round((duration*sdr.sample_rate)/1024)*1024
-	print sampleCt
+	###print sampleCt, "sampleCt"
 
 	# trigger transmission
-	import socket
+	
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
 	s.connect(("10.33.91.11", 9000))
 	microseconds = int(bittime/2*1e6)
-	print microseconds, 'us'
+	###print microseconds, 'us'
 	s.send(chr(microseconds))
 	s.close()
 
@@ -46,8 +47,8 @@ def sample(bittime):
 
 	# these numbers seem weirdly enough rather sensitive to changes in value
 	# 100 and 5 seem to work well across a wide range of bitlengths
-	blocksize = 100
-	stride = 5
+	#blocksize = 85
+	#stride = 17
 	# sliding FFT	
 	for datapiece in _window(samples, blocksize, stride):
 		amplitudes = numpy.abs(numpy.fft.fft(datapiece))[0:stride/2]
@@ -72,11 +73,11 @@ def sample(bittime):
 	
 	# find the start and end of the transmission
 	minmax = [i for i, x in enumerate(durationEncoded) if (x[1] == False) and (x[0] > 1000)]
-	print "minmax:", minmax
+	###print "minmax:", minmax
 	# trim off before/after samples
 	durationEncoded = durationEncoded[minmax[0]+1:minmax[-1]]
 
-	print durationEncoded
+	###print durationEncoded, 'durationEncoded'
 
 	# snap to ideal mean levels for high and low
 	# take the "average" duration, assuming 50% zero one division
@@ -89,7 +90,7 @@ def sample(bittime):
 	levels = numpy.array([0, low, high])
 	# snap the durations to the levels generated above
 	processed = [(_snap(levels, l), s) for (l, s) in durationEncoded]
-	print levels
+	###print levels
 	regularized = []
 
 	# expand double-length marks to two marks
@@ -121,12 +122,55 @@ if __name__ == "__main__":
 	count = 0.0
 	correct = 0.0
 	while True:
-		bits = sample(0.0001)
-		if bits.tobytes() == "hello world":
-			correct += 1.0
-		count += 1.0
-		with open("log", 'a') as f:
-			f.write(bits.tobytes()+', ')
-			f.write(str(correct/count))
-			f.write('\n')
-		print bits
+		bits = sample(0.0001, 79, 17)
+		x = bits.tobytes()
+		if x == "hello world":
+			correct += 1
+		count += 1
+		print str(count) + ": " + str(x) + " , Probs: " + str(correct / count)
+
+	# f = open('masterlog', 'w')
+
+	# correct = 0.0
+	# count = 0.0
+
+	# blocksize = 77
+	# stride = 12
+
+	# while blocksize <= 83:
+	# 	correct = 0.0
+	# 	count = 0.0
+	# 	ct = 0
+	# 	stride = 15
+	# 	while stride <= 18:
+	# 		ct = 0
+	# 		correct = 0.0
+	# 		count = 0.0
+	# 		while ct < 10:
+	# 			bits = sample(0.0001, blocksize, stride)
+	# 			x = bits.tobytes()
+	# 			if x == "hello world":
+	# 				correct += 1
+	# 			count += 1
+	# 			ct += 1
+	# 		print "blocksize: " + str(blocksize) + " stride: " + str(stride) + " probs: " + str(correct / count) + "\n"
+	# 		f.write("blocksize: " + str(blocksize) + " stride: " + str(stride) + " probs: " + str(correct / count) + "\n")
+	# 		stride += 1
+	# 	blocksize += 1
+
+	# f = open('masterlog', 'w')
+	# blocksize = 75
+	# runlength = 10
+	# while blocksize < 150:
+	# 	correct = 0.0
+	# 	f.write(str(blocksize)+' blocksize\n')
+	# 	for i in range(runlength):
+	# 		bits = sample(0.0001, blocksize)
+	# 		x = bits.tobytes()
+	# 		print "Ct: " + str(i) + ", Blocksize: " + str(blocksize) + ", Res: " + str(x)
+	# 		if x == "hello world":
+	# 			correct += 1.0
+	# 		f.write(x)
+	# 		f.write('\n')
+	# 	f.write("Correct: " + str(correct) + "\n")
+	# 	blocksize += 1
