@@ -122,41 +122,35 @@ if __name__ == "__main__":
 	count = 0.0
 	correct = 0.0
 	while True:
-		bits = sample(0.0001, 79, 17)
-		x = bits.tobytes()
-		if x == "hello world":
-			correct += 1
-		count += 1
-		print str(count) + ": " + str(x) + " , Probs: " + str(correct / count)
+		bits = sample(0.00015, 83, 17)
+		print bits.tobytes()
+		# if x == "hello world":
+		# 	correct += 1
+		# count += 1
+		# print str(count) + ": " + str(x) + " , Probs: " + str(correct / count)
 
-	# f = open('masterlog', 'w')
+	# 75, 28
+	# 83. 17
+	# f = open('masterlog_stride', 'w')
 
 	# correct = 0.0
 	# count = 0.0
-
-	# blocksize = 77
-	# stride = 12
-
-	# while blocksize <= 83:
+	# blocksize = 83
+	# stride = 13
+	# while stride <= 17:
 	# 	correct = 0.0
 	# 	count = 0.0
 	# 	ct = 0
-	# 	stride = 15
-	# 	while stride <= 18:
-	# 		ct = 0
-	# 		correct = 0.0
-	# 		count = 0.0
-	# 		while ct < 10:
-	# 			bits = sample(0.0001, blocksize, stride)
-	# 			x = bits.tobytes()
-	# 			if x == "hello world":
-	# 				correct += 1
-	# 			count += 1
-	# 			ct += 1
-	# 		print "blocksize: " + str(blocksize) + " stride: " + str(stride) + " probs: " + str(correct / count) + "\n"
-	# 		f.write("blocksize: " + str(blocksize) + " stride: " + str(stride) + " probs: " + str(correct / count) + "\n")
-	# 		stride += 1
-	# 	blocksize += 1
+	# 	while ct < 30:
+	# 		bits = sample(0.0001, blocksize, stride)
+	# 		x = bits.tobytes()
+	# 		if x == "hello world":
+	# 			correct += 1
+	# 		count += 1
+	# 		ct += 1
+	# 	print "blocksize: " + str(blocksize) + " stride: " + str(stride) + " probs: " + str(correct / count) + "\n"
+	# 	f.write("blocksize: " + str(blocksize) + " stride: " + str(stride) + " probs: " + str(correct / count) + "\n")
+	# 	stride += 1
 
 	# f = open('masterlog', 'w')
 	# blocksize = 75

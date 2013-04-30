@@ -1,0 +1,6 @@
+blocksize: 60 stride: 5 probs: 0.4
+blocksize: 60 stride: 10 probs: 0.45
+blocksize: 60 stride: 15 probs: 0.2
+blocksize: 60 stride: 20 probs: 0.1
+blocksize: 60 stride: 25 probs: 0.15
+blocksize: 60 stride: 30 probs: 0.1

@@ -1,0 +1,5 @@
+blocksize: 83 stride: 13 probs: 0.766666666667
+blocksize: 83 stride: 14 probs: 0.833333333333
+blocksize: 83 stride: 15 probs: 0.8
+blocksize: 83 stride: 16 probs: 0.7
+blocksize: 83 stride: 17 probs: 0.933333333333
