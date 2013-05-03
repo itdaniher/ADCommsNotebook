@@ -12,46 +12,44 @@ _chunk = lambda l, x: [l[i:i+x] for i in xrange(0, len(l), x)]
 
 _snap = lambda levels, x: levels.flat[numpy.abs(levels - x).argmin()]
 
-def sample(bittime):
-	###print "trying to send 'hello world' at:", int(1/bittime), "bits per second"
-	duration = 0.1 + bittime*8*11
+def getMessageSamples(bittime):
+	print "trying to send 'hello world' at:", int(1/bittime), "bits per second"
+	duration = 2*bittime*8*11+0.1
 	sdr = rtlsdr.RtlSdr()
 	sdr.sample_rate = 2.4e6
 	sdr.center_freq = 144.62e6
 	sdr.gain = 'auto'
 	# round to nearest 1024 samples
 	sampleCt = round((duration*sdr.sample_rate)/1024)*1024
-	###print sampleCt, "sampleCt"
 
 	# trigger transmission
 	
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
-	s.connect(("10.33.91.11", 9001))
+	s.connect(("10.33.91.11", 9000))
 	microseconds = int(bittime/2*1e6)
-	###print microseconds, 'us'
 	s.send(chr(microseconds))
 	s.close()
 
 	# get data
 	samples = sdr.read_samples(sampleCt)
-	print "sampled"
 	return samples	
 
 def clean(samples):
-	ntaps = 500
+	ntaps = 512
 	txfreq = 144.64e6
 	rxfreq = 144.62e6
-	periodSamples = 0.00025/(1/2.4e6)
-	print periodSamples
+	# generate the coefficients for a finite impulse response filter with a 20kilohertz bandwidth centered around our relative frequency
 	coeffs = fir_coef.filter('BP', txfreq-rxfreq-10e3, txfreq-rxfreq+10e3, 2.4e6, 'hamming', ntaps)
-	movingAverage = numpy.ones(int(periodSamples/5))/(periodSamples/5)
-	filtered = abs(signal.convolve(samples, coeffs)[0:-ntaps+1])
-	#smoothed = numpy.convolve(filtered, movingAverage)
-	print "cleaned"
-	return filtered#smoothed	
+	# apply the filter
+	filtered = signal.fftconvolve(samples, coeffs)[0:-ntaps+1]
+	return filtered
 
 
-def demod(pulseTrain):
+def demod(messageSamples):
+	periodSamples = period/(1/2.4e6)
+	pulseTrain = numpy.abs(messageSamples)
+	movingAverage = numpy.ones(int(periodSamples/5))/int(periodSamples/5)
+	smoothed = signal.fftconvolve(pulseTrain, movingAverage)
 	meanAmplitude = numpy.mean(pulseTrain)
 	
 	thresholded = map(lambda x: x > meanAmplitude, pulseTrain)
@@ -64,8 +62,6 @@ def demod(pulseTrain):
 	# trim off before/after samples
 	durationEncoded = durationEncoded[minmax[0]+1:minmax[-1]]
 
-	###print durationEncoded, 'durationEncoded'
-
 	# snap to ideal mean levels for high and low
 	# take the "average" duration, assuming 50% zero one division
 	meanDuration = numpy.mean([l for (l, s) in durationEncoded])
@@ -77,17 +73,15 @@ def demod(pulseTrain):
 	levels = numpy.array([0, low, high])
 	# snap the durations to the levels generated above
 	processed = [(_snap(levels, l), s) for (l, s) in durationEncoded]
-	###print levels
-	regularized = []
-
+	
 	# expand double-length marks to two marks
+	regularized = []
 	for (l, s) in processed:
 		if l == high:
 			regularized.append(s)
 			regularized.append(s)
 		if l == low:
 			regularized.append(s)
-	print "demodulated"
 	return regularized
 
 def decode(data):
@@ -96,24 +90,20 @@ def decode(data):
 	for i, x in enumerate(_chunk(data, 2)):
 		if x == [True, True]:
 			data.insert(i*2, False)
-			return demod(data)
+			return decode(data)
 		if x == [False, False]:
 			data.insert(i*2, True)
-			return demod(data)
+			return decode(data)
 		if x == [True, False]:
 			bits.append(False)
 		if x == [False, True]:
 			bits.append(True)
-	print "decoded"
 	return bits
 
 if __name__ == "__main__":
-	f = open("data.json", 'a')
-	while True:
-		samples = sample(0.00025)
-		cleaned = clean(samples)
-		demoded = demod(cleaned)
-		decoded = decode(demoded)
-		print decoded.tobytes()
-		if decoded.tobytes() != "hello world":
-			f.write(json.dumps((samples, cleaned, demoded, decoded)))
+	period = 1/4800
+	samples = getMessageSamples(period)
+	cleaned = clean(samples)
+	demoded = demod(cleaned)
+	decoded = decode(demoded)
+	print decoded.tobytes()
