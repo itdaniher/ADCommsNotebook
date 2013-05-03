@@ -1,0 +1,37 @@
+testScript: https://github.com/itdaniher/ADCommsNotebook/blob/master/convolveTest.py
+
+x86 (mba 2011):
+
+time to convolve 4096 floats with 1024 floats (fft) 0.000889381885529
+time to convolve 4096 floats with 1024 floats (naive) 0.00594840192795
+time to convolve 4095 floats with 1023 floats (fft) 0.00087908911705
+time to convolve 4095 floats with 1023 floats (naive) 0.0059614071846
+
+cpuinfo: http://itdaniher.com/p?NXTF
+
+arm (dockstar 2009):
+
+time to convolve 4096 floats with 1024 floats (fft) 0.171930719137
+time to convolve 4096 floats with 1024 floats (naive) 0.837549779892
+time to convolve 4095 floats with 1023 floats (fft) 0.168145028114
+time to convolve 4095 floats with 1023 floats (naive) 0.831140935898
+
+cpuinfo:
+
+Processor       : Feroceon 88FR131 rev 1 (v5l)
+BogoMIPS        : 1191.11
+Features        : swp half thumb fastmult edsp 
+CPU implementer : 0x56
+CPU architecture: 5TE
+CPU variant     : 0x2
+CPU part        : 0x131
+CPU revision    : 1
+
+Hardware        : Seagate FreeAgent DockStar
+Revision        : 0000
+Serial          : 0000000000000000
+
+
+###
+
+wtf? 0.171930719137 isn't the same thing as 0.000889381885529. 193x-140x speed difference?
