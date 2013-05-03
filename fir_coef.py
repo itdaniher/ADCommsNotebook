@@ -142,4 +142,4 @@ def filter(filterType, freq1, freq2, fs, win, N):
 		dB.append(20*math.log10(mag)) #accurate to 3 places
 
 		omega = omega*factor
-	return fixed #[fixed, floating, frequency, magnitude, dB]
+	return floating#[fixed, floating, frequency, magnitude, dB]
