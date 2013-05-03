@@ -111,9 +111,9 @@ def filter(filterType, freq1, freq2, fs, win, N):
 				sum0 += (x - c[i])**2
 			tsum += x**2
 	sum0 = math.sqrt(sum0)/math.sqrt(tsum)
-	print "error: " + str(sum0*100)+'%'
-	if sum0 > 0.2:
-		print "more taps?"
+	#print "error: " + str(sum0*100)+'%'
+	#if sum0 > 0.2:
+	#	print "more taps?"
 	
 	fixed = []
 
