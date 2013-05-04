@@ -36,4 +36,5 @@ def reverse_crc(input_bits, input_divisor, check_value):
 		return True
 
 check_value = crc(input_bits, input_divisor)
-reverse_crc(input_bits, input_divisor, check_value)
+print check_value
+print reverse_crc(input_bits, input_divisor, check_value)
