@@ -7,6 +7,7 @@ import bitarray
 import socket
 import fir_coef
 import rle
+from pylab import *
 
 _chunk = lambda l, x: [l[i:i+x] for i in xrange(0, len(l), x)]
 
@@ -14,7 +15,7 @@ _snap = lambda levels, x: levels.flat[numpy.abs(levels - x).argmin()]
 
 def getMessageSamples(bittime):
 	print "trying to send 'hello world' at:", int(1/bittime), "bits per second"
-	duration = 2*bittime*8*11+0.2
+	duration = 0.5
 	sdr = rtlsdr.RtlSdr()
 	sdr.sample_rate = 2.4e6
 	sdr.center_freq = 144.62e6
@@ -48,39 +49,36 @@ def clean(samples):
 def demod(messageSamples):
 	periodSamples = period/(1/2.4e6)
 	pulseTrain = numpy.abs(messageSamples)
-	movingAverage = numpy.ones(int(periodSamples/5))/int(periodSamples/5)
+	movingAverage = numpy.ones(int(periodSamples/100))/int(periodSamples/100)
 	smoothed = signal.fftconvolve(pulseTrain, movingAverage)
 	meanAmplitude = numpy.mean(pulseTrain)
-	
 	thresholded = map(lambda x: x > meanAmplitude, pulseTrain)
 	# duration-encoded thresholded values
 	durationEncoded = list(rle.runlength_enc(thresholded))
-	
+	durationEncoded = filter(lambda x: x[0] < 2000, durationEncoded)
+	figure()
+	from collections import Counter
+	cfalse = Counter([x[0] for x in durationEncoded if x[1] == False])
+	ctrue = Counter([x[0] for x in durationEncoded if x[1] == True])
+	f = numpy.array(cfalse.items()).T
+	fmean = numpy.mean(f[0])
+	t = numpy.array(ctrue.items()).T
+	tmean = numpy.mean(t[0])
+	plot(f[0], f[1], 'k.')
+	vlines(tmean, 0, max(t[1]), color='r', linestyles='solid')
+	plot(t[0], t[1], 'r.')
+	vlines(fmean, 0, max(f[1]), color='k', linestyles='solid')
 	# find the start and end of the transmission
-	minmax = [i for i, x in enumerate(durationEncoded) if (x[1] == False) and (x[0] > 2000)]
-	print "minmax:", minmax
-	# trim off before/after samples
-	durationEncoded = durationEncoded[minmax[0]+1:minmax[-1]]
-
-	# snap to ideal mean levels for high and low
-	# take the "average" duration, assuming 50% zero one division
-	meanDuration = numpy.mean([l for (l, s) in durationEncoded])
-	# double length mark, happens with a change in symbols ie) 01 or 10
-	high = int(numpy.mean([l for (l, s) in durationEncoded if l > meanDuration]))
-	# single length mark, happens with same symbols ie) 00 or 11
-	low = int(numpy.mean([l for (l, s) in durationEncoded if l <= meanDuration]))
-	# make an array of possible mark durations, include zero to take out the trash
-	levels = numpy.array([0, low, high])
-	# snap the durations to the levels generated above
-	processed = [(_snap(levels, l), s) for (l, s) in durationEncoded]
+	means = {True: tmean, False: fmean}
+	processed = [(l > means[s], s) for (l, s) in durationEncoded]
 	
 	# expand double-length marks to two marks
 	regularized = []
 	for (l, s) in processed:
-		if l == high:
+		if l == True:
 			regularized.append(s)
 			regularized.append(s)
-		if l == low:
+		if l == False:
 			regularized.append(s)
 	return regularized
 
@@ -105,10 +103,20 @@ if __name__ == "__main__":
 	period = 1/4000
 	samples = getMessageSamples(period)
 	cleaned = clean(samples)
+	figure()
+	t = linspace(0, len(cleaned)/2.4e6, len(cleaned))
+	tstart = t[(numpy.abs(cleaned) > 0.5).argmax()]
+	tstop = t[-(numpy.abs(cleaned) > 0.5)[::-1].argmax()]
+	vlines(tstart, 0, 1, color='r', linestyles='solid', lw = 10)	
+	vlines(tstop, 0, 1, color='k', linestyles='solid', lw = 10)	
+	plot(t, numpy.abs(cleaned))
 	demoded = demod(cleaned)
 	decoded = decode(demoded)
+	print len(decoded)/(tstop-tstart)
+	print decoded[0:-32].tobytes()
 	import crc	
 	CRCofMessage = hex(crc.crc32(decoded[0:-32].tobytes()))[2::]
 	CRCfromMessage = ''.join([hex(ord(x))[2::] for x in decoded[-32::].tobytes()])
 	print CRCofMessage, CRCfromMessage
 	print "good?", CRCofMessage == CRCfromMessage
+	show()
