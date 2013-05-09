@@ -1,8 +1,9 @@
 import numpy
 from bitarray import bitarray
 
-input_bits = bitarray('11010011101100')
-input_divisor = bitarray('1011')
+input_bits = bitarray('0')
+input_bits.frombytes('hello world')
+input_divisor = bitarray('100110000010001110110110111')
 
 def crc(input_bits, input_divisor):
 	len_crc = len(input_divisor)-1
@@ -18,7 +19,7 @@ def crc(input_bits, input_divisor):
 	check_value = input_bits[-(len_crc):]
 	return check_value
 
-def reverse_crc(input_bits, input_divisor, check_value):
+def reverse_crc(input_bits, input_divisor=bitarray('100110000010001110110110111'), check_value):
 	len_crc = len(input_divisor)-1
 	input_bits = input_bits + check_value
 	start_ct = 0
