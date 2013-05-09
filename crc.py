@@ -31,9 +31,9 @@ def reverse_crc(input_bits, input_divisor, check_value):
 		end_ct += 1
 	check_value = input_bits[-(len_crc):]
 	if check_value == bitarray('0') * len_crc:
-		return False
-	else:
 		return True
+	else:
+		return False
 
 check_value = crc(input_bits, input_divisor)
 print check_value
