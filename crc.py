@@ -19,8 +19,8 @@ def crc(input_bits, input_divisor):
 	check_value = input_bits[-(len_crc):]
 	return check_value
 
-def reverse_crc(input_bits, input_divisor=bitarray('100110000010001110110110111'), check_value):
-	len_crc = len(input_divisor)-1
+def reverse_crc(input_bits, check_value, input_divisor=bitarray('100110000010001110110110111')):
+	len_crc = 32
 	input_bits = input_bits + check_value
 	start_ct = 0
 	end_ct = len(input_divisor)
