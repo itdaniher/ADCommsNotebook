@@ -1,11 +1,11 @@
 import numpy
 from bitarray import bitarray
 
-input_bits = bitarray('0')
-input_bits.frombytes('hello world')
-input_divisor = bitarray('100110000010001110110110111')
-
-def crc(input_bits, input_divisor):
+def crc(input_bits, input_divisor = bitarray('100110000010001110110110111')):
+	if type(input_bits) == type(str()):
+		s = input_bits
+		input_bits = bitarray()
+		input_bits.frombytes(s)
 	len_crc = len(input_divisor)-1
 	input_bits = input_bits + bitarray('0') * len_crc
 	start_ct = 0
@@ -20,6 +20,10 @@ def crc(input_bits, input_divisor):
 	return check_value
 
 def reverse_crc(input_bits, check_value, input_divisor=bitarray('100110000010001110110110111')):
+	if type(input_bits) == type(str()):
+		s = input_bits
+		input_bits = bitarray()
+		input_bits.frombytes(s)
 	len_crc = 32
 	input_bits = input_bits + check_value
 	start_ct = 0
@@ -36,6 +40,9 @@ def reverse_crc(input_bits, check_value, input_divisor=bitarray('100110000010001
 	else:
 		return False
 
-check_value = crc(input_bits, input_divisor)
-print check_value
-print reverse_crc(input_bits, input_divisor, check_value)
+print [hex(ord(x)) for x in crc("hello world").tobytes()]
+import binascii
+print hex(binascii.crc32('hello world'))
+
+check_value = crc("hello world")
+print reverse_crc("hello world", check_value)
