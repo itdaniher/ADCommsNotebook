@@ -14,7 +14,7 @@ _snap = lambda levels, x: levels.flat[numpy.abs(levels - x).argmin()]
 
 def getMessageSamples(bittime):
 	print "trying to send 'hello world' at:", int(1/bittime), "bits per second"
-	duration = 2*bittime*8*11+0.1
+	duration = 2*bittime*8*11+0.2
 	sdr = rtlsdr.RtlSdr()
 	sdr.sample_rate = 2.4e6
 	sdr.center_freq = 144.62e6
@@ -57,7 +57,7 @@ def demod(messageSamples):
 	durationEncoded = list(rle.runlength_enc(thresholded))
 	
 	# find the start and end of the transmission
-	minmax = [i for i, x in enumerate(durationEncoded) if (x[1] == False) and (x[0] > 1000)]
+	minmax = [i for i, x in enumerate(durationEncoded) if (x[1] == False) and (x[0] > 2000)]
 	print "minmax:", minmax
 	# trim off before/after samples
 	durationEncoded = durationEncoded[minmax[0]+1:minmax[-1]]
@@ -101,9 +101,14 @@ def decode(data):
 	return bits
 
 if __name__ == "__main__":
-	period = 1/4800
+	period = 1/4000
 	samples = getMessageSamples(period)
 	cleaned = clean(samples)
 	demoded = demod(cleaned)
 	decoded = decode(demoded)
-	print decoded.tobytes()
+	import crc
+	print crc.reverse_crc(decoded, decoded[-32::])
+	rxed = [hex(ord(x))[2::] for x in decoded.tobytes()]
+	txed = ['68', '65', '6c', '6c', '6f', '20', '77', '6f', '72', '6c', '64', 'd4', 'a1', '18', '5']
+	print rxed
+	print txed
