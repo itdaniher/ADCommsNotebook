@@ -13,8 +13,7 @@ _chunk = lambda l, x: [l[i:i+x] for i in xrange(0, len(l), x)]
 
 _snap = lambda levels, x: levels.flat[numpy.abs(levels - x).argmin()]
 
-def getMessageSamples(bittime):
-	print "trying to send 'hello world' at:", int(1/bittime), "bits per second"
+def getMessageSamples():
 	duration = 0.5
 	sdr = rtlsdr.RtlSdr()
 	sdr.sample_rate = 2.4e6
@@ -22,16 +21,6 @@ def getMessageSamples(bittime):
 	sdr.gain = 'auto'
 	# round to nearest 1024 samples
 	sampleCt = round((duration*sdr.sample_rate)/1024)*1024
-
-	# trigger transmission
-	
-	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
-	s.connect(("10.33.91.11", 9000))
-	microseconds = int(bittime/2*1e6)
-	s.send(chr(microseconds))
-	s.close()
-
-	# get data
 	samples = sdr.read_samples(sampleCt)
 	return samples	
 
@@ -47,6 +36,7 @@ def clean(samples):
 
 
 def demod(messageSamples):
+	period = 1/4000
 	periodSamples = period/(1/2.4e6)
 	pulseTrain = numpy.abs(messageSamples)
 	movingAverage = numpy.ones(int(periodSamples/100))/int(periodSamples/100)
@@ -54,7 +44,8 @@ def demod(messageSamples):
 	meanAmplitude = numpy.mean(pulseTrain)
 	thresholded = map(lambda x: x > meanAmplitude, pulseTrain)
 	# duration-encoded thresholded values
-	durationEncoded = list(rle.runlength_enc(thresholded))
+	durationEncoded = numpy.array(list(rle.runlength_enc(thresholded)))
+	print durationEncoded.argmax()
 	durationEncoded = filter(lambda x: x[0] < 2000, durationEncoded)
 	figure()
 	from collections import Counter
@@ -100,8 +91,7 @@ def decode(data):
 
 if __name__ == "__main__":
 	import struct
-	period = 1/4000
-	samples = getMessageSamples(period)
+	samples = getMessageSamples()
 	cleaned = clean(samples)
 	figure()
 	t = linspace(0, len(cleaned)/2.4e6, len(cleaned))
